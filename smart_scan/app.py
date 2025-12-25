@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, send_file, jsonify
-from scanner import scan_document, manual_warp
+from .scanner import scan_document, manual_warp
 import img2pdf, io, base64
 
 app = Flask(__name__)
