@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Smart Scanner Pro - Khổ A4</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <style>
+        :root {
+            --apple-blue: #007aff;
+            --apple-orange: #ff9500;
+            --apple-green: #34c759;
+            --apple-gray: #f2f2f7;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--apple-gray);
+            margin: 0;
+            padding: 0;
+            color: #1c1c1e;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #007aff, #5ac8fa);
+            padding: 24px 16px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: white;
+            letter-spacing: 0.3px;
+        }
+
+        .control-panel {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-main {
+            background: var(--apple-blue);
+            color: white;
+        }
+
+        .btn-export {
+            background: var(--apple-green);
+            color: white;
+        }
+
+        .btn-export:disabled {
+            background: #d1d1d6;
+            cursor: not-allowed;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .card img {
+            width: 100%;
+            height: 280px;
+            object-fit: contain;
+            background: #f8f8f8;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-tools {
+            padding: 12px;
+        }
+
+        .btn-edit {
+            width: 100%;
+            padding: 10px;
+            background: var(--apple-gray);
+            color: var(--apple-blue);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Giao diện Modal Crop iPhone Style */
+        #editModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 9999;
+        }
+
+        .modal-body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .canvas-container {
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
+            border: 1px solid #333;
+        }
+
+        .toolbar {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            box-sizing: border-box;
+        }
+
+        .btn-apple {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .btn-apple.save {
+            color: var(--apple-orange);
+            font-weight: 700;
+        }
+
+        #status {
+            color: var(--apple-blue);
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        /* Modal Preview PDF Style */
+        #previewModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10000;
+        }
+
+        .preview-container {
+            width: 90%;
+            height: 90%;
+            margin: 2% auto;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #pdfFrame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>AI Smart Scanner Pro</h1>
+        <div id="status">⚡ Đang xử lý tài liệu...</div>
+    </div>
+
+    <div class="control-panel">
+        <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
+        <button class="btn btn-main" onclick="document.getElementById('fileInput').click()">🖼️ Chọn ảnh từ máy</button>
+        <button class="btn btn-export" id="exportBtn" disabled onclick="downloadPDF()">⬇️ Xuất PDF A4</button>
+        <button class="btn" style="background: #5856d6; color: white;" id="previewBtn" disabled
+            onclick="previewPDF()">👁️ Xem trước</button>
+    </div>
+
+    <div class="preview-grid" id="grid"></div>
+
+    <div id="editModal">
+        <div class="modal-body">
+            <div style="color: #888; margin-bottom: 15px;">Kéo các góc để căn chỉnh vùng văn bản</div>
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+            <div class="toolbar">
+                <button class="btn-apple" onclick="closeModal()">Hủy</button>
+                <button class="btn-apple save" onclick="saveManual()">Xong</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="previewModal">
+        <div class="preview-container">
+            <div class="preview-header">
+                <strong style="font-size: 18px;">Xem trước tài liệu A4</strong>
+                <div>
+                    <button class="btn btn-main" style="display:inline-block; padding: 5px 15px;"
+                        onclick="closePreview()">Đóng</button>
+                </div>
+            </div>
+            <iframe id="pdfFrame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        let rawStore = {};
+        let order = [];
+        let canvas = new fabric.Canvas('canvas', { selection: false, backgroundColor: '#000' });
+        let currentId = null;
+
+        // 1. Xử lý Upload và Auto-Scan
+        document.getElementById('fileInput').onchange = async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            document.getElementById('status').style.display = 'block';
+
+            for (let file of files) {
+                await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                        const b64 = event.target.result.split(',')[1];
+                        const id = 'id_' + Math.random().toString(36).substr(2, 9);
+                        rawStore[id] = b64;
+
+                        const fd = new FormData();
+                        fd.append('image', file);
+
+                        try {
+                            const res = await fetch('/process_auto', { method: 'POST', body: fd });
+                            const data = await res.json();
+                            renderCard(id, data.image);
+                        } catch (err) { console.error("Lỗi:", err); }
+                        resolve();
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('exportBtn').disabled = false;
+        };
+
+        // 2. Hiển thị kết quả lên Grid
+        function renderCard(id, b64) {
+            const grid = document.getElementById('grid');
+            let card = document.getElementById(id);
+            if (!card) {
+                card = document.createElement('div');
+                card.className = 'card'; card.id = id;
+                grid.appendChild(card);
+                order.push({ id, b64 });
+            }
+            card.innerHTML = `
+            <img src="data:image/jpeg;base64,${b64}">
+            <div class="card-tools">
+                <button class="btn-edit" onclick="openEdit('${id}')">Chỉnh tay 4 góc</button>
+            </div>
+        `;
+            const idx = order.findIndex(x => x.id === id);
+            order[idx].b64 = b64;
+        }
+
+        // 3. Logic vẽ đường kẻ nối 4 điểm
+        function updateLines() {
+            const circles = canvas.getObjects('circle');
+            const lines = canvas.getObjects('line');
+            lines.forEach(l => canvas.remove(l));
+
+            for (let i = 0; i < circles.length; i++) {
+                let start = circles[i];
+                let end = circles[(i + 1) % circles.length];
+                let line = new fabric.Line([start.left, start.top, end.left, end.top], {
+                    stroke: '#ff9500', strokeWidth: 2, selectable: false, evented: false
+                });
+                canvas.add(line);
+                line.sendToBack();
+            }
+            if (canvas.getObjects('image')[0]) canvas.getObjects('image')[0].sendToBack();
+        }
+
+        canvas.on('object:moving', updateLines);
+
+        // 4. Mở trình chỉnh sửa 4 góc (Khắc phục lỗi INVALID_URL)
+        function openEdit(id) {
+            currentId = id;
+            document.getElementById('editModal').style.display = 'block';
+
+            // Sử dụng Image thuần để tránh lỗi chuỗi Base64 quá dài
+            const imgObj = new Image();
+            imgObj.onload = function () {
+                const fImg = new fabric.Image(imgObj);
+                canvas.clear();
+                const scale = Math.min((window.innerWidth * 0.9) / fImg.width, (window.innerHeight * 0.7) / fImg.height);
+                fImg.scale(scale);
+                canvas.setDimensions({ width: fImg.getScaledWidth(), height: fImg.getScaledHeight() });
+                canvas.add(fImg); fImg.selectable = false;
+
+                const margin = 40;
+                const pts = [
+                    { x: margin, y: margin }, { x: canvas.width - margin, y: margin },
+                    { x: canvas.width - margin, y: canvas.height - margin }, { x: margin, y: canvas.height - margin }
+                ];
+
+                pts.forEach(p => {
+                    canvas.add(new fabric.Circle({
+                        left: p.x, top: p.y, radius: 14, fill: 'rgba(255, 149, 0, 0.7)',
+                        stroke: '#fff', strokeWidth: 2, originX: 'center', originY: 'center',
+                        hasControls: false, hasBorders: false
+                    }));
+                });
+                updateLines();
+                canvas.renderAll();
+            };
+            imgObj.src = 'data:image/jpeg;base64,' + rawStore[id];
+        }
+
+        // 5. Gửi tọa độ về Server xử lý Crop
+        async function saveManual() {
+            const img = canvas.getObjects('image')[0];
+            const ratio = img.width / img.getScaledWidth();
+            const circles = canvas.getObjects('circle');
+            const pts = circles.map(c => ({ x: c.left * ratio, y: c.top * ratio }));
+
+            const res = await fetch('/process_manual', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: rawStore[currentId], points: pts })
+            });
+            const data = await res.json();
+            renderCard(currentId, data.image);
+            closeModal();
+        }
+
+        function closeModal() { document.getElementById('editModal').style.display = 'none'; }
+
+        // 6. Tải file PDF chuẩn A4
+        async function downloadPDF() {
+            const res = await fetch('/convert', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ images: order.map(x => x.b64) })
+            });
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = "SmartScan_A4.pdf"; a.click();
+        }
+
+        // Hàm mở xem trước PDF
+        async function previewPDF() {
+            document.getElementById('status').innerText = "🔄 Đang tạo bản xem trước...";
+            document.getElementById('status').style.display = 'block';
+
+            const res = await fetch('/convert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ images: order.map(x => x.b64) })
+            });
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+
+            document.getElementById('pdfFrame').src = url;
+            document.getElementById('previewModal').style.display = 'block';
+            document.getElementById('status').style.display = 'none';
+        }
+
+        function closePreview() {
+            document.getElementById('previewModal').style.display = 'none';
+            // Giải phóng bộ nhớ
+            URL.revokeObjectURL(document.getElementById('pdfFrame').src);
+            document.getElementById('pdfFrame').src = "";
+        }
+
+        // Đừng quên cập nhật hàm handleFiles để enable nút Preview
+        // Trong handleFiles, thêm dòng này ở cuối:
+        document.getElementById('previewBtn').disabled = false;
+    </script>
+</body>
+
+</html>
